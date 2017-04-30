@@ -3,6 +3,23 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (onInput)
 
 
+-- temp CSS for dev
+
+
+stylesheet =
+    let
+        tag = "link"
+        attrs =
+            [ attribute "rel"       "stylesheet"
+            , attribute "property"  "stylesheet"
+            , attribute "href"      "sudoku.css"
+            ]
+        children = []
+    in
+        node tag attrs children
+
+
+
 main =
   Html.beginnerProgram { model = model, view = view, update = update }
 
@@ -101,10 +118,16 @@ printRow : Int -> BoxRow -> List (Html Msg)
 printRow y row = List.indexedMap (printBox y) row
 
 printSquare : Square -> Html Msg
-printSquare square = div [] (List.indexedMap (\y srow -> div [] (printRow y srow)) square)
+printSquare square = div [class "square"] (List.indexedMap (\y srow -> div [] (printRow y srow)) square)
 
 view : Model -> Html Msg
-view model = printSquare model
+view model =
+    let
+        hero = printSquare model
+    in
+        div [] [stylesheet, hero]
+
+
 -- view model = div [] (printRow model)
 -- view model = div [] [ printBox 0 model ]
 

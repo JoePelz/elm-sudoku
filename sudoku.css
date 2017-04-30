@@ -1,0 +1,33 @@
+body {
+    background-color: powderblue;
+}
+
+input {
+    display: inline-block;
+    padding: 0.6em;
+    margin: 0.2em;
+    font-size: 2em;
+    background-color: white;
+    border: 2px solid yellow;
+    width: 1em;
+    height: 1em;
+    text-align: center;
+}
+
+input.locked {
+    background-color: #EEEEEE;
+    color: #555555;
+}
+
+input.invalid {
+    background-color: #FFCCCC;
+    color: FF0000;
+}
+
+
+div.square {
+    display: inline-block;
+    margin: 0.5em;
+    border: 2px solid black;
+    padding: 0.5em;
+}
