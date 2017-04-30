@@ -12,13 +12,23 @@ main =
 type SudoNum = Blank | One | Two | Three | Four | Five | Six | Seven | Eight | Nine | Bad
 type alias Box = { contents: SudoNum, valid: Bool, locked: Bool }
 type alias BoxRow = List Box
-type alias Model = BoxRow
+type alias Square = List BoxRow
+type alias Model = Square
 
 model : Model
 model =
-    [ { contents = Blank, valid = True, locked = False }
-    , { contents = Blank, valid = True, locked = False }
-    , { contents = Blank, valid = True, locked = False }
+    [   [ { contents = Blank, valid = True, locked = False }
+        , { contents = Blank, valid = True, locked = False }
+        , { contents = Blank, valid = True, locked = False }
+        ]
+    ,   [ { contents = Blank, valid = True, locked = False }
+        , { contents = Blank, valid = True, locked = False }
+        , { contents = Blank, valid = True, locked = False }
+        ]
+    ,   [ { contents = Blank, valid = True, locked = False }
+        , { contents = Blank, valid = True, locked = False }
+        , { contents = Blank, valid = True, locked = False }
+        ]
     ]
 
 stringToSudoNum : String -> SudoNum
@@ -55,32 +65,46 @@ sudoNumToString sn =
 
 -- UPDATE
 
-type Msg = Change Int String
+type Msg = Change Int Int String
 
 update : Msg -> Model -> Model
 update msg model =
     case msg of
-        Change i s -> change model i (stringToSudoNum s)
+        Change x y s -> changeSquare model x y (stringToSudoNum s)
 
-change : BoxRow -> Int -> SudoNum -> BoxRow
-change b i val =
-    case b of
+changeSquare : Square -> Int -> Int -> SudoNum -> Square
+changeSquare sq x y val =
+    case sq of
         [] -> []
-        [x] -> if i == 0 then [{ x | contents = val }] else [x]
-        (x::xs) -> if i == 0 then { x | contents = val } :: xs else x :: (change xs (i-1) val)
---    case val of
---        Bad -> b
---        _ -> { b | contents = val }
+        [br] -> if y == 0 then [(changeBoxRow br x val)] else [br]
+        (br::brs) -> if y == 0 then (changeBoxRow br x val) :: brs else br :: (changeSquare brs x (y-1) val)
+
+changeBoxRow : BoxRow -> Int -> SudoNum -> BoxRow
+changeBoxRow br x val =
+    case br of
+        [] -> []
+        [b] -> if x == 0 then [changeCell b val] else [b]
+        (b::bs) -> if x == 0 then (changeCell b val) :: bs else b :: (changeBoxRow bs (x-1) val)
+
+changeCell : Box -> SudoNum -> Box
+changeCell b val =
+    case val of
+        Bad -> b
+        _ -> { b | contents = val }
 
 -- VIEW
 
-printBox : Int -> Box -> Html Msg
-printBox n box = input [onInput (Change n), value (sudoNumToString box.contents)] []
+printBox : Int -> Int -> Box -> Html Msg
+printBox y x box = input [onInput (Change x y), value (sudoNumToString box.contents)] []
 
-printRow : BoxRow -> List (Html Msg)
-printRow row = List.indexedMap printBox row
+printRow : Int -> BoxRow -> List (Html Msg)
+printRow y row = List.indexedMap (printBox y) row
+
+printSquare : Square -> Html Msg
+printSquare square = div [] (List.indexedMap (\y srow -> div [] (printRow y srow)) square)
 
 view : Model -> Html Msg
-view model = div [] (printRow model)
+view model = printSquare model
+-- view model = div [] (printRow model)
 -- view model = div [] [ printBox 0 model ]
 
