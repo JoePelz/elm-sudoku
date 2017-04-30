@@ -12,10 +12,14 @@ main =
 type SudoNum = Blank | One | Two | Three | Four | Five | Six | Seven | Eight | Nine | Bad
 type alias Box = { contents: SudoNum, valid: Bool, locked: Bool }
 type alias BoxRow = List Box
-type alias Model = Box
+type alias Model = BoxRow
 
 model : Model
-model = { contents = Blank, valid = True, locked = False }
+model =
+    [ { contents = Blank, valid = True, locked = False }
+    , { contents = Blank, valid = True, locked = False }
+    , { contents = Blank, valid = True, locked = False }
+    ]
 
 stringToSudoNum : String -> SudoNum
 stringToSudoNum s =
@@ -56,13 +60,17 @@ type Msg = Change Int String
 update : Msg -> Model -> Model
 update msg model =
     case msg of
-        Change n s -> change model 0 (stringToSudoNum s)
+        Change i s -> change model i (stringToSudoNum s)
 
-change : Model -> Int -> SudoNum -> Model
+change : BoxRow -> Int -> SudoNum -> BoxRow
 change b i val =
-    case val of
-        Bad -> b
-        _ -> { b | contents = val }
+    case b of
+        [] -> []
+        [x] -> if i == 0 then [{ x | contents = val }] else [x]
+        (x::xs) -> if i == 0 then { x | contents = val } :: xs else x :: (change xs (i-1) val)
+--    case val of
+--        Bad -> b
+--        _ -> { b | contents = val }
 
 -- VIEW
 
@@ -73,6 +81,6 @@ printRow : BoxRow -> List (Html Msg)
 printRow row = List.indexedMap printBox row
 
 view : Model -> Html Msg
-view model = div []
-    [ printBox 0 model ]
+view model = div [] (printRow model)
+-- view model = div [] [ printBox 0 model ]
 
