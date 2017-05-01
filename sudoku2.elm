@@ -27,9 +27,9 @@ main =
 -- MODEL
 
 type SudoNum = Blank | One | Two | Three | Four | Five | Six | Seven | Eight | Nine | Bad
-type alias Box = { contents: SudoNum, valid: Bool, locked: Bool }
-type alias BoxRow = List Box
-type alias Square = List BoxRow
+type alias Cell = { contents: SudoNum, valid: Bool, locked: Bool }
+type alias CellRow = List Cell
+type alias Square = List CellRow
 type alias Model = Square
 
 model : Model
@@ -93,29 +93,41 @@ changeSquare : Square -> Int -> Int -> SudoNum -> Square
 changeSquare sq x y val =
     case sq of
         [] -> []
-        [br] -> if y == 0 then [(changeBoxRow br x val)] else [br]
-        (br::brs) -> if y == 0 then (changeBoxRow br x val) :: brs else br :: (changeSquare brs x (y-1) val)
+        [br] -> if y == 0 then [(changeCellRow br x val)] else [br]
+        (br::brs) -> if y == 0 then (changeCellRow br x val) :: brs else br :: (changeSquare brs x (y-1) val)
 
-changeBoxRow : BoxRow -> Int -> SudoNum -> BoxRow
-changeBoxRow br x val =
+changeCellRow : CellRow -> Int -> SudoNum -> CellRow
+changeCellRow br x val =
     case br of
         [] -> []
         [b] -> if x == 0 then [changeCell b val] else [b]
-        (b::bs) -> if x == 0 then (changeCell b val) :: bs else b :: (changeBoxRow bs (x-1) val)
+        (b::bs) -> if x == 0 then (changeCell b val) :: bs else b :: (changeCellRow bs (x-1) val)
 
-changeCell : Box -> SudoNum -> Box
+changeCell : Cell -> SudoNum -> Cell
 changeCell b val =
     case val of
         Bad -> b
         _ -> { b | contents = val }
 
+--rowToNumbes : CellRow
+
+--validateSquare : Square -> Square
+--validateSquare sq =
+--    let
+--        numbers = List.map (\val -> row
+
+-- need to find any numbers that appear more than once
+
+
+
+
 -- VIEW
 
-printBox : Int -> Int -> Box -> Html Msg
-printBox y x box = input [onInput (Change x y), value (sudoNumToString box.contents)] []
+printCell : Int -> Int -> Cell -> Html Msg
+printCell y x cell = input [onInput (Change x y), value (sudoNumToString cell.contents)] []
 
-printRow : Int -> BoxRow -> List (Html Msg)
-printRow y row = List.indexedMap (printBox y) row
+printRow : Int -> CellRow -> List (Html Msg)
+printRow y row = List.indexedMap (printCell y) row
 
 printSquare : Square -> Html Msg
 printSquare square = div [class "square"] (List.indexedMap (\y srow -> div [] (printRow y srow)) square)
@@ -129,5 +141,5 @@ view model =
 
 
 -- view model = div [] (printRow model)
--- view model = div [] [ printBox 0 model ]
+-- view model = div [] [ printCell 0 model ]
 
