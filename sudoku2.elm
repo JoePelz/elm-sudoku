@@ -177,11 +177,11 @@ validateSquare square =
 
 -- VIEW
 
-printCell : Int -> Int -> Cell -> Html Msg
-printCell cy cx cell =
+printCell : Int -> Int -> Int -> Int -> Cell -> Html Msg
+printCell sx sy cy cx cell =
     if List.member cell.contents [Blank, Bad] then
         input
-            [ onInput (Change cx cy)
+            [ onInput (Change (sx * 3 + cx) (sy * 3 + cy))
             , value (sudoNumToString cell.contents)
             , classList
                 [ ("cell", True)
@@ -190,7 +190,7 @@ printCell cy cx cell =
             ] []
     else if cell.locked then
         input
-            [ onInput (Change cx cy)
+            [ onInput (Change (sx * 3 + cx) (sy * 3 + cy))
             , value (sudoNumToString cell.contents)
             , classList
                 [ ("cell", True)
@@ -199,7 +199,7 @@ printCell cy cx cell =
             ] []
     else
         input
-            [ onInput (Change cx cy)
+            [ onInput (Change (sx * 3 + cx) (sy * 3 + cy))
             , value (sudoNumToString cell.contents)
             , classList
                 [ ("cell", True)
@@ -208,11 +208,11 @@ printCell cy cx cell =
                 ]
             ] []
 
-printCellRow : Int -> CellRow -> List (Html Msg)
-printCellRow cy crow = List.indexedMap (printCell cy) crow
+printCellRow : Int -> Int -> Int -> CellRow -> List (Html Msg)
+printCellRow sx sy cy crow = List.indexedMap (printCell sx sy cy) crow
 
 printSquare : Int -> Int -> Square -> Html Msg
-printSquare sy sx square = div [class "square"] (List.indexedMap (\cy crow -> div [] (printCellRow cy crow)) square)
+printSquare sy sx square = div [class "square"] (List.indexedMap (\cy crow -> div [] (printCellRow sx sy cy crow)) square)
 
 printSquareRow : Int -> SquareRow -> List (Html Msg)
 printSquareRow sy srow = List.indexedMap (printSquare sy) srow
