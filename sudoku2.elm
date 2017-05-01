@@ -30,6 +30,8 @@ type SudoNum = Blank | One | Two | Three | Four | Five | Six | Seven | Eight | N
 type alias Cell = { contents: SudoNum, valid: Bool, locked: Bool }
 type alias CellRow = List Cell
 type alias Square = List CellRow
+type alias SquareRow = List Square
+type alias Sudoku = List SquareRow
 type alias Model = Square
 
 sudoNumCompare a b =
@@ -176,10 +178,10 @@ validateSquare square =
 -- VIEW
 
 printCell : Int -> Int -> Cell -> Html Msg
-printCell y x cell =
+printCell cy cx cell =
     if List.member cell.contents [Blank, Bad] then
         input
-            [ onInput (Change x y)
+            [ onInput (Change cx cy)
             , value (sudoNumToString cell.contents)
             , classList
                 [ ("cell", True)
@@ -188,7 +190,7 @@ printCell y x cell =
             ] []
     else if cell.locked then
         input
-            [ onInput (Change x y)
+            [ onInput (Change cx cy)
             , value (sudoNumToString cell.contents)
             , classList
                 [ ("cell", True)
@@ -197,7 +199,7 @@ printCell y x cell =
             ] []
     else
         input
-            [ onInput (Change x y)
+            [ onInput (Change cx cy)
             , value (sudoNumToString cell.contents)
             , classList
                 [ ("cell", True)
@@ -206,16 +208,22 @@ printCell y x cell =
                 ]
             ] []
 
-printRow : Int -> CellRow -> List (Html Msg)
-printRow y row = List.indexedMap (printCell y) row
+printCellRow : Int -> CellRow -> List (Html Msg)
+printCellRow cy crow = List.indexedMap (printCell cy) crow
 
-printSquare : Square -> Html Msg
-printSquare square = div [class "square"] (List.indexedMap (\y srow -> div [] (printRow y srow)) square)
+printSquare : Int -> Int -> Square -> Html Msg
+printSquare sy sx square = div [class "square"] (List.indexedMap (\cy crow -> div [] (printCellRow cy crow)) square)
+
+printSquareRow : Int -> SquareRow -> List (Html Msg)
+printSquareRow sy srow = List.indexedMap (printSquare sy) srow
+
+printSudoku : Sudoku -> Html Msg
+printSudoku sudoku = div [class "sudoku"] (List.indexedMap (\sy srow -> div [] (printSquareRow sy srow)) sudoku)
 
 view : Model -> Html Msg
 view model =
     let
-        hero = printSquare model
+        hero = printSquare 0 0 model
     in
         div [] [stylesheet, hero]
 
