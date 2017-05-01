@@ -32,6 +32,13 @@ type alias CellRow = List Cell
 type alias Square = List CellRow
 type alias Model = Square
 
+sudoNumCompare a b =
+    let
+        sa = sudoNumToString a
+        sb = sudoNumToString b
+    in
+        compare sa sb
+
 model : Model
 model =
     [   [ { contents = Blank, valid = True, locked = False }
@@ -109,12 +116,43 @@ changeCell b val =
         Bad -> b
         _ -> { b | contents = val }
 
---rowToNumbes : CellRow
+cellRowToNumbers : CellRow -> List SudoNum
+cellRowToNumbers row = List.map .contents row
 
---validateSquare : Square -> Square
---validateSquare sq =
---    let
---        numbers = List.map (\val -> row
+squareToNumbers : Square -> List SudoNum
+squareToNumbers square = List.foldr List.append [] (List.map cellRowToNumbers square)
+
+repeats : List SudoNum -> List SudoNum
+repeats l =
+    case l of
+        [] -> []
+        [x] -> []
+        [x, y] -> if x==y then [x] else []
+        (x::y::xs) -> if x==y then x :: repeats xs else repeats (y::xs)
+
+uniquify : List SudoNum -> List SudoNum
+uniquify l =
+    case l of
+        [] -> []
+        [x] -> [x]
+        [x, y] -> if x==y then [x] else [x, y]
+        (x::y::xs) -> if x == y then x :: uniquify xs else x :: uniquify (y::xs)
+
+findDuplicates : List SudoNum -> List SudoNum
+findDuplicates numbers =
+    let
+        sorted = List.sortWith sudoNumCompare numbers
+    in
+        uniquify (repeats sorted)
+
+-- q = [One, Two, Three, Four, Four, Two, Four, Six, Blank, Blank, Bad]
+
+validateSquare : Square -> Square
+validateSquare square =
+    let
+        numbers = squareToNumbers square
+    in
+        square
 
 -- need to find any numbers that appear more than once
 
