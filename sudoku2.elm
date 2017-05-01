@@ -32,7 +32,7 @@ type alias CellRow = List Cell
 type alias Square = List CellRow
 type alias SquareRow = List Square
 type alias Sudoku = List SquareRow
-type alias Model = Square
+type alias Model = Sudoku
 
 sudoNumCompare a b =
     let
@@ -41,21 +41,14 @@ sudoNumCompare a b =
     in
         compare sa sb
 
+init_cell = { contents = Blank, valid = True, locked = False }
+init_cell_row = [init_cell, init_cell, init_cell]
+init_square = [init_cell_row, init_cell_row, init_cell_row]
+init_square_row = [validateSquare init_square, validateSquare init_square, validateSquare init_square]
+init_sudoku = [init_square_row, init_square_row, init_square_row]
+
 model : Model
-model = validateSquare
-    [   [ { contents = Blank, valid = True, locked = False }
-        , { contents = Blank, valid = True, locked = False }
-        , { contents = Blank, valid = True, locked = False }
-        ]
-    ,   [ { contents = Blank, valid = True, locked = False }
-        , { contents = Blank, valid = True, locked = False }
-        , { contents = Blank, valid = True, locked = False }
-        ]
-    ,   [ { contents = Blank, valid = True, locked = False }
-        , { contents = Blank, valid = True, locked = False }
-        , { contents = Blank, valid = True, locked = False }
-        ]
-    ]
+model = init_sudoku
 
 stringToSudoNum : String -> SudoNum
 stringToSudoNum s =
@@ -91,39 +84,56 @@ sudoNumToString sn =
 
 -- UPDATE
 
-type Msg = Change Int Int String
+type Msg = Change Int Int Int Int String
 
 update : Msg -> Model -> Model
 update msg model =
     case msg of
-        Change x y s -> updateSquare model x y (stringToSudoNum s)
+        Change sx sy cx cy s -> updateSudoku model sx sy cx cy (stringToSudoNum s)
+
+updateSudoku : Sudoku -> Int -> Int -> Int -> Int -> SudoNum -> Sudoku
+updateSudoku sud sx sy cx cy val = changeSudoku sud sx sy cx cy val
 
 updateSquare : Square -> Int -> Int -> SudoNum -> Square
-updateSquare sq x y val =
+updateSquare sq cx cy val =
     let
-        updated = changeSquare sq x y val
+        updated = changeSquare sq cx cy val
     in
         validateSquare updated
 
-changeSquare : Square -> Int -> Int -> SudoNum -> Square
-changeSquare sq x y val =
-    case sq of
+changeSudoku : Sudoku -> Int -> Int -> Int -> Int -> SudoNum -> Sudoku
+changeSudoku sud sx sy cx cy val =
+    case sud of
         [] -> []
-        [br] -> if y == 0 then [(changeCellRow br x val)] else [br]
-        (br::brs) -> if y == 0 then (changeCellRow br x val) :: brs else br :: (changeSquare brs x (y-1) val)
+        [sr] -> if sy == 0 then [(changeSquareRow sr sx cx cy val)] else [sr]
+        (sr::srs) -> if sy == 0 then (changeSquareRow sr sx cx cy val) :: srs else sr :: (changeSudoku srs sx (sy-1) cx cy val)
+
+changeSquareRow : SquareRow -> Int -> Int -> Int -> SudoNum -> SquareRow
+changeSquareRow sr sx cx cy val =
+    case sr of
+        [] -> []
+        [s] -> if sx == 0 then [updateSquare s cx cy val] else [s]
+        (s::ss) -> if sx == 0 then (updateSquare s cx cy val) ::  ss else s :: (changeSquareRow ss (sx-1) cx cy val)
+
+changeSquare : Square -> Int -> Int -> SudoNum -> Square
+changeSquare s cx cy val =
+    case s of
+        [] -> []
+        [cr] -> if cy == 0 then [(changeCellRow cr cx val)] else [cr]
+        (cr::crs) -> if cy == 0 then (changeCellRow cr cx val) :: crs else cr :: (changeSquare crs cx (cy-1) val)
 
 changeCellRow : CellRow -> Int -> SudoNum -> CellRow
-changeCellRow br x val =
-    case br of
+changeCellRow cr cx val =
+    case cr of
         [] -> []
-        [b] -> if x == 0 then [changeCell b val] else [b]
-        (b::bs) -> if x == 0 then (changeCell b val) :: bs else b :: (changeCellRow bs (x-1) val)
+        [c] -> if cx == 0 then [changeCell c val] else [c]
+        (c::cs) -> if cx == 0 then (changeCell c val) :: cs else c :: (changeCellRow cs (cx-1) val)
 
 changeCell : Cell -> SudoNum -> Cell
-changeCell b val =
+changeCell c val =
     case val of
-        Bad -> b
-        _ -> { b | contents = val }
+        Bad -> c
+        _ -> { c | contents = val }
 
 cellRowToNumbers : CellRow -> List SudoNum
 cellRowToNumbers row = List.map .contents row
@@ -181,7 +191,7 @@ printCell : Int -> Int -> Int -> Int -> Cell -> Html Msg
 printCell sx sy cy cx cell =
     if List.member cell.contents [Blank, Bad] then
         input
-            [ onInput (Change (sx * 3 + cx) (sy * 3 + cy))
+            [ onInput (Change sx sy cx cy)
             , value (sudoNumToString cell.contents)
             , classList
                 [ ("cell", True)
@@ -190,7 +200,7 @@ printCell sx sy cy cx cell =
             ] []
     else if cell.locked then
         input
-            [ onInput (Change (sx * 3 + cx) (sy * 3 + cy))
+            [ onInput (Change sx sy cx cy)
             , value (sudoNumToString cell.contents)
             , classList
                 [ ("cell", True)
@@ -199,7 +209,7 @@ printCell sx sy cy cx cell =
             ] []
     else
         input
-            [ onInput (Change (sx * 3 + cx) (sy * 3 + cy))
+            [ onInput (Change sx sy cx cy)
             , value (sudoNumToString cell.contents)
             , classList
                 [ ("cell", True)
@@ -223,7 +233,7 @@ printSudoku sudoku = div [class "sudoku"] (List.indexedMap (\sy srow -> div [] (
 view : Model -> Html Msg
 view model =
     let
-        hero = printSquare 0 0 model
+        hero = printSudoku model
     in
         div [] [stylesheet, hero]
 
