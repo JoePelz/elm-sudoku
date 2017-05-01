@@ -14,14 +14,24 @@ input {
     text-align: center;
 }
 
-input.locked {
+input.cell-locked {
     background-color: #EEEEEE;
     color: #555555;
 }
 
-input.invalid {
+input.cell-invalid {
     background-color: #FFCCCC;
     color: FF0000;
+}
+
+input.cell-valid {
+    background-color: #CCFFCC;
+    color: 000000;
+}
+
+input.cell-empty {
+    background-color: #FFFFFF;
+    color: 000000;
 }
 
 

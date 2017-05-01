@@ -40,7 +40,7 @@ sudoNumCompare a b =
         compare sa sb
 
 model : Model
-model =
+model = validateSquare
     [   [ { contents = Blank, valid = True, locked = False }
         , { contents = Blank, valid = True, locked = False }
         , { contents = Blank, valid = True, locked = False }
@@ -94,7 +94,14 @@ type Msg = Change Int Int String
 update : Msg -> Model -> Model
 update msg model =
     case msg of
-        Change x y s -> changeSquare model x y (stringToSudoNum s)
+        Change x y s -> updateSquare model x y (stringToSudoNum s)
+
+updateSquare : Square -> Int -> Int -> SudoNum -> Square
+updateSquare sq x y val =
+    let
+        updated = changeSquare sq x y val
+    in
+        validateSquare updated
 
 changeSquare : Square -> Int -> Int -> SudoNum -> Square
 changeSquare sq x y val =
@@ -147,12 +154,19 @@ findDuplicates numbers =
 
 -- q = [One, Two, Three, Four, Four, Two, Four, Six, Blank, Blank, Bad]
 
+setValidCell : List SudoNum -> Cell -> Cell
+setValidCell dup c = {c | valid = (not <| List.member c.contents dup)}
+
+setValidCellRow : List SudoNum -> CellRow -> CellRow
+setValidCellRow dup cr = List.map (setValidCell dup) cr
+
 validateSquare : Square -> Square
 validateSquare square =
     let
         numbers = squareToNumbers square
+        duplicates = findDuplicates numbers
     in
-        square
+        List.map (setValidCellRow duplicates) square
 
 -- need to find any numbers that appear more than once
 
@@ -162,7 +176,35 @@ validateSquare square =
 -- VIEW
 
 printCell : Int -> Int -> Cell -> Html Msg
-printCell y x cell = input [onInput (Change x y), value (sudoNumToString cell.contents)] []
+printCell y x cell =
+    if List.member cell.contents [Blank, Bad] then
+        input
+            [ onInput (Change x y)
+            , value (sudoNumToString cell.contents)
+            , classList
+                [ ("cell", True)
+                , ("cell-empty", List.member cell.contents [Blank, Bad])
+                ]
+            ] []
+    else if cell.locked then
+        input
+            [ onInput (Change x y)
+            , value (sudoNumToString cell.contents)
+            , classList
+                [ ("cell", True)
+                , ("cell-locked", cell.locked)
+                ]
+            ] []
+    else
+        input
+            [ onInput (Change x y)
+            , value (sudoNumToString cell.contents)
+            , classList
+                [ ("cell", True)
+                , ("cell-valid", cell.valid)
+                , ("cell-invalid", not cell.valid)
+                ]
+            ] []
 
 printRow : Int -> CellRow -> List (Html Msg)
 printRow y row = List.indexedMap (printCell y) row
