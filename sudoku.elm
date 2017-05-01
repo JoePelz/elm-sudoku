@@ -164,7 +164,6 @@ findDuplicates numbers =
     in
         uniquify (repeats sorted)
 
--- q = [One, Two, Three, Four, Four, Two, Four, Six, Blank, Blank, Bad]
 
 setValidCell : List SudoNum -> Cell -> Cell
 setValidCell dup c = {c | valid = (not <| List.member c.contents dup)}
@@ -179,11 +178,6 @@ validateSquare square =
         duplicates = findDuplicates numbers
     in
         List.map (setValidCellRow duplicates) square
-
--- need to find any numbers that appear more than once
-
-
-
 
 -- VIEW
 
