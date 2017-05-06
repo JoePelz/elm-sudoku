@@ -138,8 +138,46 @@ changeCell c val =
 cellRowToNumbers : CellRow -> List SudoNum
 cellRowToNumbers row = List.map .contents row
 
+-- python 9x3x3
+-- square = [zip(*[[(chr(row)+chr(col)+str(i)), (chr(row)+chr(col)+str(i+3)), chr(row)+chr(col)+str(i+6)] for i in range(1, 4)]) for row in range(97, 100) for col in range(97, 100)]
+-- python 3x3x3x3
+-- square = [square[:3], square[3:6], square[6:]]
+
+-- elm repl
+-- sudoku = [[[[11,12,13],[14,15,16],[17,18,19]],[[21,22,23],[24,25,26],[27,28,29]],[[31,32,33],[34,35,26],[37,38,39]]],[[[41,42,43],[44,45,46],[47,48,49]],[[51,52,53],[54,55,56],[57,58,59]],[[61,62,63],[64,65,66],[67,68,69]]],[[[71,72,73],[74,75,76],[77,78,79]],[[81,82,83],[84,85,86],[87,88,89]],[[91,92,93],[94,95,96],[97,98,99]]]]
+-- numbers = List.concat <| List.concat <| List.concat sudoku
+-- rows = numListTo
+-- cols =
+sudokuToNumList : Sudoku -> List SudoNum
+sudokuToNumList sud = List.map .contents <| List.concat <| List.concat <| List.concat sud
+
+numListToRows : List SudoNum -> List (List SudoNum)
+numListToRows nums =
+    case nums of
+        [] -> []
+        xs -> (List.take 9 nums) :: numListToRows (List.drop 9 nums)
+
+transpose : List (List a) -> List (List a)
+transpose ll =
+  case ll of
+    [] -> []
+    ([]::xss) -> transpose xss
+    ((x::xs)::xss) ->
+      let
+        heads = List.filterMap List.head xss
+        tails = List.filterMap List.tail xss
+      in
+        (x::heads)::transpose (xs::tails)
+
+
+
+
+
+
+
+
 squareToNumbers : Square -> List SudoNum
-squareToNumbers square = List.foldr List.append [] (List.map cellRowToNumbers square)
+squareToNumbers square = List.concatMap cellRowToNumbers square
 
 repeats : List SudoNum -> List SudoNum
 repeats l =
