@@ -27,7 +27,7 @@ main =
 -- MODEL
 
 type SudoNum = Blank | One | Two | Three | Four | Five | Six | Seven | Eight | Nine | Bad
-type alias Cell = { contents: SudoNum, valid: Bool, locked: Bool }
+type alias Cell = { contents: SudoNum, valid: Bool, validRow: Bool, validCol: Bool, locked: Bool }
 type alias CellRow = List Cell
 type alias Square = List CellRow
 type alias SquareRow = List Square
@@ -41,7 +41,7 @@ sudoNumCompare a b =
     in
         compare sa sb
 
-init_cell = { contents = Blank, valid = True, locked = False }
+init_cell = { contents = Blank, valid = True, validRow = True, validCol = True, locked = False }
 init_cell_row = [init_cell, init_cell, init_cell]
 init_square = [init_cell_row, init_cell_row, init_cell_row]
 init_square_row = [validateSquare init_square, validateSquare init_square, validateSquare init_square]
@@ -148,14 +148,14 @@ cellRowToNumbers row = List.map .contents row
 -- numbers = List.concat <| List.concat <| List.concat sudoku
 -- rows = numListTo
 -- cols =
-sudokuToNumList : Sudoku -> List SudoNum
-sudokuToNumList sud = List.map .contents <| List.concat <| List.concat <| List.concat sud
+sudokuToCellList : Sudoku -> List Cell
+sudokuToCellList sud = List.concat <| List.concat <| List.concat sud
 
-numListToRows : List SudoNum -> List (List SudoNum)
-numListToRows nums =
+cellListToRows : List Cell -> List (List SudoNum)
+cellListToRows nums =
     case nums of
         [] -> []
-        xs -> (List.take 9 nums) :: numListToRows (List.drop 9 nums)
+        xs -> (List.map .contents <| List.take 9 nums) :: cellListToRows (List.drop 9 nums)
 
 transpose : List (List a) -> List (List a)
 transpose ll =
@@ -169,7 +169,25 @@ transpose ll =
       in
         (x::heads)::transpose (xs::tails)
 
+markBadRows : List SudoNum -> List Cell -> List Cell
+markBadRows badness cells = cells
 
+markBadCols : List SudoNum -> List Cell -> List Cell
+markBadCols badness cells = cells
+
+cellListToSudoku : List Cell -> Sudoku
+    ???
+
+validateRows : Sudoku -> Sudoku
+validateRows sud =
+    let
+        cells = sudokuToCellList sud
+        rows = cellListToRows cells
+        cols = transpose rows
+        badrows = List.map findDuplicates rows
+        badcols = List.map findDuplicates cols
+    in
+        cellListToSudoku <| markBadRows badrows <| markBadCols badcols cells
 
 
 
