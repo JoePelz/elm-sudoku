@@ -1,6 +1,7 @@
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onInput)
+import Debug exposing (..)
 
 
 -- temp CSS for dev
@@ -101,6 +102,29 @@ sudokuToCells sud =
     in
         partial |> List.concat |> List.concat
 
+groupN : Int -> List a -> List (List a)
+groupN n cells =
+    case cells of
+        [] -> []
+        xs -> (List.take n cells) :: groupN n (List.drop n cells)
+
+cellsToSudoku : List Cell -> Sudoku
+cellsToSudoku cells =
+    let
+        rows = groupN 3 cells
+        groups = groupN 3 rows
+    in
+    case groups of
+        [] -> []
+        xs -> (transpose (List.take 3 groups)) :: cellsToSudoku (List.drop 27 cells)
+
+transposeCells : List Cell -> List Cell
+transposeCells cells =
+    let
+        rows = groupN 9 cells
+    in
+        transpose rows |> List.concat
+
 -- UPDATE
 
 type Msg = Change Int Int Int Int String
@@ -134,17 +158,52 @@ validateLines sud =
         cols = transpose rows
         badrows = List.map findDuplicates rows
         badcols = List.map findDuplicates cols
+        temp0 = Debug.log "Bad rows:" badrows
+        temp1 = Debug.log "Bad cols:" badcols
     in
-        cellListToSudoku cells
-        -- cellListToSudoku <| markBadRows badrows <| markBadCols badcols cells
+        cellsToSudoku <| markBadRows temp0 <| markBadCols temp1 cells
 
 -- UPDATE helpers
 
-setValidCellRow : List SudoNum -> CellRow -> CellRow
+-- for validateSquare
+setValidCellRow : List SudoNum -> List Cell -> List Cell
 setValidCellRow dup cr = List.map (setValidCell dup) cr
 
 setValidCell : List SudoNum -> Cell -> Cell
 setValidCell dup c = {c | valid = (not <| List.member c.contents dup)}
+
+-- for validateRow
+setValidRow : List SudoNum -> List Cell -> List Cell
+setValidRow dup cr =
+    let
+        row_valid = List.length dup == 0
+    in
+        List.map (setValidRowCell row_valid dup) cr
+
+setValidRowCell : Bool -> List SudoNum -> Cell -> Cell
+setValidRowCell valid_row dup c =
+    if List.member c.contents dup
+    then
+        {c | valid = False, validRow = valid_row}
+    else
+        {c | validRow = valid_row}
+
+-- for validateCol
+setValidCol : List SudoNum -> List Cell -> List Cell
+setValidCol dup cr =
+    let
+        col_valid = List.length dup == 0
+    in
+        List.map (setValidColCell col_valid dup) cr
+
+setValidColCell : Bool -> List SudoNum -> Cell -> Cell
+setValidColCell valid_col dup c =
+    if List.member c.contents dup
+    then
+        {c | valid = False, validCol = valid_col}
+    else
+        {c | validCol = valid_col}
+
 
 cellListToRows : List Cell -> List (List SudoNum)
 cellListToRows nums =
@@ -152,11 +211,34 @@ cellListToRows nums =
         [] -> []
         xs -> (List.map .contents <| List.take 9 nums) :: cellListToRows (List.drop 9 nums)
 
+-- badness is a 9 lists, one per row of cells.
+-- cells is a single list of 81 cells.
+
 markBadRows : List (List SudoNum) -> List Cell -> List Cell
-markBadRows badness cells = cells
+markBadRows badness cells =
+    let
+        heads = List.take 9 cells
+        tails = List.drop 9 cells
+    in
+    case badness of
+        [] -> []
+        [x] -> setValidRow x heads
+        (x::xs) -> List.append (setValidRow x heads) (markBadRows xs tails)
+
+-- need to iterate over
+
+markBadCols_helper badness cells =
+    let
+        heads = List.take 9 cells
+        tails = List.drop 9 cells
+    in
+    case badness of
+        [] -> []
+        [x] -> setValidCol x heads
+        (x::xs) -> List.append (setValidCol x heads) (markBadCols_helper xs tails)
 
 markBadCols : List (List SudoNum) -> List Cell -> List Cell
-markBadCols badness cells = cells
+markBadCols badness cells = transposeCells (markBadCols_helper badness (transposeCells cells))
 
 -- START: Change cell value  code
 changeSudoku : Sudoku -> Int -> Int -> Int -> Int -> SudoNum -> Sudoku
@@ -194,36 +276,16 @@ changeCell c val =
         _ -> { c | contents = val }
 -- END: Change cell value code
 
-
--- OLD STUFF
-
-cellListToCellRow : List a -> List (List a)
-cellListToCellRow cells =
-    case cells of
-        [] -> []
-        xs -> (List.take 3 cells) :: cellListToCellRow (List.drop 3 cells)
-
-cellListToSudoku : List Cell -> Sudoku
-cellListToSudoku cells =
-    let
-        rows = cellListToCellRow cells
-        groups = cellListToCellRow rows
-    in
-    case groups of
-        [] -> []
-        xs -> (transpose (List.take 3 groups)) :: cellListToSudoku (List.drop 27 cells)
-
-
 -- OTHER HELPERS
 
 -- preconditions: list is sorted; "==" will detect equality
-repeats : List a -> List a
+repeats : List SudoNum -> List SudoNum
 repeats l =
     case l of
         [] -> []
         [x] -> []
-        [x, y] -> if x==y then [x] else []
-        (x::y::xs) -> if x==y then x :: repeats xs else repeats (y::xs)
+        [x, y] -> if x==y && x /= Blank then [x] else []
+        (x::y::xs) -> if x==y && x /= Blank then x :: repeats xs else repeats (y::xs)
 
 -- preconditions: list is sorted; "==" will detect equality.
 uniquify : List a -> List a
