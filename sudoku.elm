@@ -158,10 +158,8 @@ validateLines sud =
         cols = transpose rows
         badrows = List.map findDuplicates rows
         badcols = List.map findDuplicates cols
-        temp0 = Debug.log "Bad rows:" badrows
-        temp1 = Debug.log "Bad cols:" badcols
     in
-        cellsToSudoku <| markBadRows temp0 <| markBadCols temp1 cells
+        cellsToSudoku <| markBadRows badrows <| markBadCols badcols cells
 
 -- UPDATE helpers
 
@@ -319,16 +317,7 @@ findDuplicates numbers =
 
 printCell : Int -> Int -> Int -> Int -> Cell -> Html Msg
 printCell sx sy cy cx cell =
-    if List.member cell.contents [Blank, Bad] then
-        input
-            [ onInput (Change sx sy cx cy)
-            , value (sudoNumToString cell.contents)
-            , classList
-                [ ("cell", True)
-                , ("cell-empty", List.member cell.contents [Blank, Bad])
-                ]
-            ] []
-    else if cell.locked then
+    if cell.locked then
         input
             [ onInput (Change sx sy cx cy)
             , value (sudoNumToString cell.contents)
@@ -343,8 +332,11 @@ printCell sx sy cy cx cell =
             , value (sudoNumToString cell.contents)
             , classList
                 [ ("cell", True)
+                , ("cell-empty", cell.contents == Blank || cell.contents == Bad)
                 , ("cell-valid", cell.valid)
                 , ("cell-invalid", not cell.valid)
+                , ("cell-invalid-row", not cell.validRow)
+                , ("cell-invalid-col", not cell.validCol)
                 ]
             ] []
 
