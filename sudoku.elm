@@ -41,8 +41,9 @@ sudoNumCompare a b =
     in
         compare sa sb
 
-init_cell = { contents = Blank, valid = True, validRow = True, validCol = True, locked = False }
-init_cell_row = [init_cell, init_cell, init_cell]
+init_cell : SudoNum -> Cell
+init_cell val = { contents = val, valid = True, validRow = True, validCol = True, locked = False }
+init_cell_row = [init_cell Blank, init_cell Blank, init_cell Blank]
 init_square = [init_cell_row, init_cell_row, init_cell_row]
 init_square_row = [validateSquare init_square, validateSquare init_square, validateSquare init_square]
 init_sudoku = [init_square_row, init_square_row, init_square_row]
@@ -82,6 +83,24 @@ sudoNumToString sn =
         Blank -> ""
         Bad -> ""
 
+sudokuToSquares : Sudoku -> List Square
+sudokuToSquares sud = List.concat sud
+
+xformSquares : List (List a) -> List (List a)
+xformSquares part =
+    case part of
+        [] -> []
+        xs -> List.append (transpose (List.take 3 part)) (xformSquares (List.drop 3 part))
+
+-- sudokuToCells : List (List (List number)) -> List number
+sudokuToCells : Sudoku -> List Cell
+sudokuToCells sud =
+    let
+        squares = sudokuToSquares sud
+        partial = xformSquares squares
+    in
+        partial |> List.concat |> List.concat
+
 -- UPDATE
 
 type Msg = Change Int Int Int Int String
@@ -92,15 +111,54 @@ update msg model =
         Change sx sy cx cy s -> updateSudoku model sx sy cx cy (stringToSudoNum s)
 
 updateSudoku : Sudoku -> Int -> Int -> Int -> Int -> SudoNum -> Sudoku
-updateSudoku sud sx sy cx cy val = changeSudoku sud sx sy cx cy val
-
-updateSquare : Square -> Int -> Int -> SudoNum -> Square
-updateSquare sq cx cy val =
+updateSudoku sud sx sy cx cy val =
     let
-        updated = changeSquare sq cx cy val
+        changed = changeSudoku sud sx sy cx cy val
+        -- the above line also validates squares
     in
-        validateSquare updated
+        validateLines changed
 
+validateSquare : Square -> Square
+validateSquare square =
+    let
+        numbers = List.concatMap (List.map .contents) square
+        duplicates = findDuplicates numbers
+    in
+        List.map (setValidCellRow duplicates) square
+
+validateLines : Sudoku -> Sudoku
+validateLines sud =
+    let
+        cells = sudokuToCells sud
+        rows = cellListToRows cells
+        cols = transpose rows
+        badrows = List.map findDuplicates rows
+        badcols = List.map findDuplicates cols
+    in
+        cellListToSudoku cells
+        -- cellListToSudoku <| markBadRows badrows <| markBadCols badcols cells
+
+-- UPDATE helpers
+
+setValidCellRow : List SudoNum -> CellRow -> CellRow
+setValidCellRow dup cr = List.map (setValidCell dup) cr
+
+setValidCell : List SudoNum -> Cell -> Cell
+setValidCell dup c = {c | valid = (not <| List.member c.contents dup)}
+
+cellListToRows : List Cell -> List (List SudoNum)
+cellListToRows nums =
+    case nums of
+        [] -> []
+        xs -> (List.map .contents <| List.take 9 nums) :: cellListToRows (List.drop 9 nums)
+
+markBadRows : List (List SudoNum) -> List Cell -> List Cell
+markBadRows badness cells = cells
+
+markBadCols : List (List SudoNum) -> List Cell -> List Cell
+markBadCols badness cells = cells
+
+-- START: Change cell value  code
 changeSudoku : Sudoku -> Int -> Int -> Int -> Int -> SudoNum -> Sudoku
 changeSudoku sud sx sy cx cy val =
     case sud of
@@ -112,8 +170,8 @@ changeSquareRow : SquareRow -> Int -> Int -> Int -> SudoNum -> SquareRow
 changeSquareRow sr sx cx cy val =
     case sr of
         [] -> []
-        [s] -> if sx == 0 then [updateSquare s cx cy val] else [s]
-        (s::ss) -> if sx == 0 then (updateSquare s cx cy val) ::  ss else s :: (changeSquareRow ss (sx-1) cx cy val)
+        [s] -> if sx == 0 then [validateSquare <| changeSquare s cx cy val] else [s]
+        (s::ss) -> if sx == 0 then (validateSquare <| changeSquare s cx cy val) ::  ss else s :: (changeSquareRow ss (sx-1) cx cy val)
 
 changeSquare : Square -> Int -> Int -> SudoNum -> Square
 changeSquare s cx cy val =
@@ -134,28 +192,47 @@ changeCell c val =
     case val of
         Bad -> c
         _ -> { c | contents = val }
+-- END: Change cell value code
 
-cellRowToNumbers : CellRow -> List SudoNum
-cellRowToNumbers row = List.map .contents row
 
--- python 9x3x3
--- square = [zip(*[[(chr(row)+chr(col)+str(i)), (chr(row)+chr(col)+str(i+3)), chr(row)+chr(col)+str(i+6)] for i in range(1, 4)]) for row in range(97, 100) for col in range(97, 100)]
--- python 3x3x3x3
--- square = [square[:3], square[3:6], square[6:]]
+-- OLD STUFF
 
--- elm repl
--- sudoku = [[[[11,12,13],[14,15,16],[17,18,19]],[[21,22,23],[24,25,26],[27,28,29]],[[31,32,33],[34,35,26],[37,38,39]]],[[[41,42,43],[44,45,46],[47,48,49]],[[51,52,53],[54,55,56],[57,58,59]],[[61,62,63],[64,65,66],[67,68,69]]],[[[71,72,73],[74,75,76],[77,78,79]],[[81,82,83],[84,85,86],[87,88,89]],[[91,92,93],[94,95,96],[97,98,99]]]]
--- numbers = List.concat <| List.concat <| List.concat sudoku
--- rows = numListTo
--- cols =
-sudokuToCellList : Sudoku -> List Cell
-sudokuToCellList sud = List.concat <| List.concat <| List.concat sud
-
-cellListToRows : List Cell -> List (List SudoNum)
-cellListToRows nums =
-    case nums of
+cellListToCellRow : List a -> List (List a)
+cellListToCellRow cells =
+    case cells of
         [] -> []
-        xs -> (List.map .contents <| List.take 9 nums) :: cellListToRows (List.drop 9 nums)
+        xs -> (List.take 3 cells) :: cellListToCellRow (List.drop 3 cells)
+
+cellListToSudoku : List Cell -> Sudoku
+cellListToSudoku cells =
+    let
+        rows = cellListToCellRow cells
+        groups = cellListToCellRow rows
+    in
+    case groups of
+        [] -> []
+        xs -> (transpose (List.take 3 groups)) :: cellListToSudoku (List.drop 27 cells)
+
+
+-- OTHER HELPERS
+
+-- preconditions: list is sorted; "==" will detect equality
+repeats : List a -> List a
+repeats l =
+    case l of
+        [] -> []
+        [x] -> []
+        [x, y] -> if x==y then [x] else []
+        (x::y::xs) -> if x==y then x :: repeats xs else repeats (y::xs)
+
+-- preconditions: list is sorted; "==" will detect equality.
+uniquify : List a -> List a
+uniquify l =
+    case l of
+        [] -> []
+        [x] -> [x]
+        [x, y] -> if x==y then [x] else [x, y]
+        (x::y::xs) -> if x == y then x :: uniquify xs else x :: uniquify (y::xs)
 
 transpose : List (List a) -> List (List a)
 transpose ll =
@@ -169,71 +246,12 @@ transpose ll =
       in
         (x::heads)::transpose (xs::tails)
 
-markBadRows : List SudoNum -> List Cell -> List Cell
-markBadRows badness cells = cells
-
-markBadCols : List SudoNum -> List Cell -> List Cell
-markBadCols badness cells = cells
-
-cellListToSudoku : List Cell -> Sudoku
-    ???
-
-validateRows : Sudoku -> Sudoku
-validateRows sud =
-    let
-        cells = sudokuToCellList sud
-        rows = cellListToRows cells
-        cols = transpose rows
-        badrows = List.map findDuplicates rows
-        badcols = List.map findDuplicates cols
-    in
-        cellListToSudoku <| markBadRows badrows <| markBadCols badcols cells
-
-
-
-
-
-
-squareToNumbers : Square -> List SudoNum
-squareToNumbers square = List.concatMap cellRowToNumbers square
-
-repeats : List SudoNum -> List SudoNum
-repeats l =
-    case l of
-        [] -> []
-        [x] -> []
-        [x, y] -> if x==y then [x] else []
-        (x::y::xs) -> if x==y then x :: repeats xs else repeats (y::xs)
-
-uniquify : List SudoNum -> List SudoNum
-uniquify l =
-    case l of
-        [] -> []
-        [x] -> [x]
-        [x, y] -> if x==y then [x] else [x, y]
-        (x::y::xs) -> if x == y then x :: uniquify xs else x :: uniquify (y::xs)
-
 findDuplicates : List SudoNum -> List SudoNum
 findDuplicates numbers =
     let
         sorted = List.sortWith sudoNumCompare numbers
     in
         uniquify (repeats sorted)
-
-
-setValidCell : List SudoNum -> Cell -> Cell
-setValidCell dup c = {c | valid = (not <| List.member c.contents dup)}
-
-setValidCellRow : List SudoNum -> CellRow -> CellRow
-setValidCellRow dup cr = List.map (setValidCell dup) cr
-
-validateSquare : Square -> Square
-validateSquare square =
-    let
-        numbers = squareToNumbers square
-        duplicates = findDuplicates numbers
-    in
-        List.map (setValidCellRow duplicates) square
 
 -- VIEW
 
