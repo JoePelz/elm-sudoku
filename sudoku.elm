@@ -4,6 +4,18 @@ import Html.Events exposing (onInput)
 import Debug exposing (..)
 
 
+initial_state =
+    [ " 9 1  3  "
+    , " 1  6  24"
+    , "7  38    "
+    , "      4 6"
+    , " 83   19 "
+    , "2 7      "
+    , "    93  5"
+    , "67  2  8 "
+    , "  9  4 6 "
+    ]
+
 -- temp CSS for dev
 
 
@@ -42,15 +54,33 @@ sudoNumCompare a b =
     in
         compare sa sb
 
-init_cell : SudoNum -> Cell
-init_cell val = { contents = val, valid = True, validRow = True, validCol = True, locked = False }
-init_cell_row = [init_cell Blank, init_cell Blank, init_cell Blank]
+init_cell : Bool -> SudoNum -> Cell
+init_cell block val = { contents = val, valid = True, validRow = True, validCol = True, locked = block }
+init_cell_row = [init_cell False Blank, init_cell False Blank, init_cell False Blank]
 init_square = [init_cell_row, init_cell_row, init_cell_row]
 init_square_row = [validateSquare init_square, validateSquare init_square, validateSquare init_square]
 init_sudoku = [init_square_row, init_square_row, init_square_row]
 
+charToCell : Char -> Cell
+charToCell c =
+    case c of
+        '1' -> init_cell True One
+        '2' -> init_cell True Two
+        '3' -> init_cell True Three
+        '4' -> init_cell True Four
+        '5' -> init_cell True Five
+        '6' -> init_cell True Six
+        '7' -> init_cell True Seven
+        '8' -> init_cell True Eight
+        '9' -> init_cell True Nine
+        _ -> init_cell False Blank
+
+installInitialState : List String -> Sudoku
+installInitialState strs = String.concat strs |> String.toList |> List.map charToCell |> cellsToSudoku
+
+
 model : Model
-model = init_sudoku
+model = installInitialState initial_state
 
 stringToSudoNum : String -> SudoNum
 stringToSudoNum s =
@@ -271,7 +301,9 @@ changeCell : Cell -> SudoNum -> Cell
 changeCell c val =
     case val of
         Bad -> c
-        _ -> { c | contents = val }
+        _ ->  if c.locked == False
+                then { c | contents = val }
+                else c
 -- END: Change cell value code
 
 -- OTHER HELPERS
@@ -324,6 +356,8 @@ printCell sx sy cy cx cell =
             , classList
                 [ ("cell", True)
                 , ("cell-locked", cell.locked)
+                , ("cell-invalid-row", not cell.validRow)
+                , ("cell-invalid-col", not cell.validCol)
                 ]
             ] []
     else

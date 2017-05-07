@@ -8,15 +8,17 @@ input {
     margin: 0.2em;
     font-size: 2em;
     background-color: white;
-    border: 2px solid yellow;
+    border: 2px solid lime;
     width: 1em;
     height: 1em;
     text-align: center;
 }
 
-input.cell-locked {
+.cell-locked {
     background-color: #EEEEEE;
+    border: 2px solid darkgrey;
     color: #555555;
+    font-weight: bold;
 }
 
 input.cell-invalid {
